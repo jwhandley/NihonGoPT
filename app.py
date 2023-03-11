@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import openai
 import os
 import random
+from newspaper import Article
 
 app = Flask(__name__)
 # this is just here because it is needed to maintain session variables, it doesn't matter
@@ -129,29 +130,33 @@ def index():
             return image_url
     else:
            # Make a request to the webpage
-        url = "https://www.nikkei.com/topics/topic_expert_EVP00000"
+        url = "https://www.nikkei.com/"
         response = requests.get(url)
         # Parse the HTML content using Beautiful Soup
         soup = BeautifulSoup(response.content, 'html.parser')
         # Find the div with class "article article--main"
-        articles = soup.find_all('h3', {'class': 'nui-teaser__title'})
+        articles = soup.select('article:has(a[href^="/article/"])')
+        if not isinstance(articles, list):
+            articles = [articles]
+        
         main_article = random.choice(articles)
         
         # Get the next web link following the main article div
-        next_link = main_article.find('a')['href']
-        response = requests.get(next_link)
-        # Parse the HTML content using Beautiful Soup
-        soup = BeautifulSoup(response.content, 'html.parser')
-        # Extract the first three paragraphs of text from <p class="article__paragraph ">
-        paragraphs = soup.select('p.paragraph_p15tm1hb')[:3]
-        paragraph_texts = []
-        for paragraph in paragraphs:
-            paragraph_texts.append(paragraph.text)
+        next_link = main_article.select_one('a[href^="/article/"]')['href']
+        
+        article = Article('https://www.nikkei.com' + next_link)
+        article.download()
+        article.parse()
+        
+        paragraph_texts = article.text.split('\n\n')
+        paragraph_texts = [p for p in paragraph_texts if p != '企業での記事共有や会議資料への転載・複製、注文印刷などをご希望の方は、リンク先をご覧ください。']
+        paragraph_texts = paragraph_texts[:5] if len(paragraph_texts) > 5 else paragraph_texts
+        
             # join paragraph texts into a single string
         texthold = '\n'.join(paragraph_texts)
         texthold = texthold.replace('\n', '</p><p>')
         session['text']=texthold
-        session['title'] = soup.title.string 
+        session['title'] = article.title
         
     
         instructions = "Pretend you are an expert in language instruction. Your student's level is intermediate to advanced."
