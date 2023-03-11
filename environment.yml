@@ -1,0 +1,9 @@
+name: NihonGoPT
+dependencies:
+    - python=3.9
+    - flask
+    - requests
+    - bs4
+    - pip
+    - pip:
+        - openai

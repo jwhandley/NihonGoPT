@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import openai
 import os
+import random
 
 app = Flask(__name__)
 # this is just here because it is needed to maintain session variables, it doesn't matter
@@ -67,7 +68,7 @@ def index():
         elif 'content4' in request.form:
             explanation = "I am going to try to translate the following sentence: " + session['reply4'][54:] + " Here is my attempted translation: " + request.form['content4']
             messages = [
-                {"role":"system","content":"If my translation is perfectly accurate, say, Yes, that's it!.  If there are minor mistakes, say, You almost got it!  Make sure that my translation is correct in the context of the article.  Please misstate any inaccuracies, especially phrases or words I got wrong which might be tricky for a native English speaker to translate correctly.  Remember, you are a French teacher!  Remember, you are only to respond to the translation of the one exact sentence we are discussing.  Do not discuss other text.  Please answer in English."},
+                {"role":"system","content":"If my translation is perfectly accurate, say, Yes, that's it!.  If there are minor mistakes, say, You almost got it!  Make sure that my translation is correct in the context of the article.  Please misstate any inaccuracies, especially phrases or words I got wrong which might be tricky for a native English speaker to translate correctly.  Remember, you are a Japanese teacher!  Remember, you are only to respond to the translation of the one exact sentence we are discussing.  Do not discuss other text.  Please answer in English."},
                 {"role":"user","content":explanation},
             ]
             response = openai.ChatCompletion.create(
@@ -81,7 +82,7 @@ def index():
         elif 'content5' in request.form:
             explanation = "I am going to try to explain the following grammatical construction: " + session['reply5'] + "Here is my attempted explanation: " + request.form['content5']
             messages = [
-                {"role":"system","content":"You are a French teacher using the attached article from Le Monde to try to help a student understand points of grammar.  Please answer in English. The student is attempting to explain the grammatical construct you asked about.  If my description is perfectly accurate, say, Yes, that's it!.  If there are minor mistakes, say, You almost got it!  Make sure that my translation is correct in the context of the article. If I am wrong, be sure to explain clearly and concisely what is mistaken about my interpretation of the grammar.  Remember, you are a French teacher!"},
+                {"role":"system","content":"You are a Japanese teacher using the attached article from Le Monde to try to help a student understand points of grammar.  Please answer in English. The student is attempting to explain the grammatical construct you asked about.  If my description is perfectly accurate, say, Yes, that's it!.  If there are minor mistakes, say, You almost got it!  Make sure that my translation is correct in the context of the article. If I am wrong, be sure to explain clearly and concisely what is mistaken about my interpretation of the grammar.  Remember, you are a Japanese teacher!"},
                 {"role":"user","content":explanation},
                 {"role":"assistant","content":session['text']}
             ]
@@ -96,7 +97,7 @@ def index():
         elif 'content6' in request.form:
             explanation = request.form['content6']
             messages = [
-                {"role":"system","content":"You are a French teacher using the attached article from Le Monde to try to help a student understand French.  The student has asked a question about a particular phrase or sentence or word which he does not understand fully.  Explain in English, given a full translation and pointing out any challenging words, phrases, idioms, or constructions. Please answer in English."},
+                {"role":"system","content":"You are a Japanese teacher using the attached article from Nihon Keizai Shimbun to try to help a student understand Japanese.  The student has asked a question about a particular phrase or sentence or word which he does not understand fully.  Explain in English, given a full translation and pointing out any challenging words, phrases, idioms, or constructions. Please answer in English."},
                 {"role":"user","content":explanation},
                 {"role":"assistant","content":session['text']}
             ]
@@ -111,7 +112,7 @@ def index():
         
         elif 'imagedraw' in request.form:
             messages = [
-                {"role":"system","content":"Choose a single sentence only and remember, you are a French teacher."},
+                {"role":"system","content":"Choose a single sentence only and remember, you are a Japanese teacher."},
                 {"role":"user","content":"Choose a single sentence from the article that involves a lot of activity, or action, or the kind of thing that could be visualized or drawn."},
                 {"role":"assistant","content":session['text']}
             ]
@@ -128,19 +129,21 @@ def index():
             return image_url
     else:
            # Make a request to the webpage
-        url = "http://www.lemonde.fr"
+        url = "https://www.nikkei.com/topics/topic_expert_EVP00000"
         response = requests.get(url)
         # Parse the HTML content using Beautiful Soup
         soup = BeautifulSoup(response.content, 'html.parser')
         # Find the div with class "article article--main"
-        main_article_div = soup.find('div', {'class': 'article article--main'})
+        articles = soup.find_all('h3', {'class': 'nui-teaser__title'})
+        main_article = random.choice(articles)
+        
         # Get the next web link following the main article div
-        next_link = main_article_div.find_next('a')['href']
+        next_link = main_article.find('a')['href']
         response = requests.get(next_link)
         # Parse the HTML content using Beautiful Soup
         soup = BeautifulSoup(response.content, 'html.parser')
         # Extract the first three paragraphs of text from <p class="article__paragraph ">
-        paragraphs = soup.select('p.article__paragraph')[:3]
+        paragraphs = soup.select('p.paragraph_p15tm1hb')[:3]
         paragraph_texts = []
         for paragraph in paragraphs:
             paragraph_texts.append(paragraph.text)
@@ -156,7 +159,7 @@ def index():
         GPTmessages = []
         GPTmessages.append({"role":"system","content":instructions})
         GPTmessages.append({"role":"assistant","content":session['text']})
-        user_question = "Choose three pieces of vocabulary or idioms, either nouns or verbs (in which case leave them conjugated as in the article), which will be difficult for an English speaker, from this news article appropriate for testing a student who is intermediate to advanced in French.  List them in a comma separated way, with no other response."
+        user_question = "Choose three pieces of vocabulary or idioms, either nouns or verbs (in which case leave them conjugated as in the article), which will be difficult for an English speaker, from this news article appropriate for testing a student who is intermediate to advanced in Japanese.  List them in a comma separated way, with no other response."
         GPTmessages.append({"role":"user","content":user_question})
         response=openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -172,7 +175,7 @@ def index():
         session['reply3'] = "What does " + word3 + " mean?"
     
         instructions = "Pretend you are an expert in language instruction. Your student's level is intermediate to advanced. Be sure to ask explicitly for the student to translate the sentence you pick!"    
-        explanation = "Choose one single interesting sentence from the attached text and ask me explicitly to translate it from French into English.  Say nothing else in response except for stating the sentence in French which you want me to translate into English, and asking me to give this translation.  Do NOT translate the sentence yourself - remember, you are trying to teach me French!"
+        explanation = "Choose one single interesting sentence from the attached text and ask me explicitly to translate it from Japanese into English.  Say nothing else in response except for stating the sentence in Japanese which you want me to translate into English, and asking me to give this translation.  Do NOT translate the sentence yourself - remember, you are trying to teach me Japanese!"
         messages = [
             {"role":"system","content":instructions},
             {"role":"user","content":explanation},
@@ -185,7 +188,7 @@ def index():
         session['reply4'] = response["choices"][0]["message"]["content"]   
     
         instructions = "Pretend you are an expert in language instruction. Your student's level is intermediate to advanced."
-        explanation = "Choose one single grammatical construction which may be difficult to understand for someone at my level.  State the grammatical construction without telling me what it means, and ask me to explain how it is being used."
+        explanation = "Choose one single grammatical construction which may be difficult to understand for someone at my level.  State the grammatical construction in Japanese without telling me what it means, and ask me to explain how it is being used."
         messages = [
             {"role":"system","content":instructions},
             {"role":"user","content":explanation},
@@ -198,7 +201,7 @@ def index():
         session['reply5'] = response["choices"][0]["message"]["content"] 
         
         messages = [
-                {"role":"system","content":"Choose a single sentence only and remember, you are a French teacher."},
+                {"role":"system","content":"Choose a single sentence only and remember, you are a Japanese teacher."},
                 {"role":"user","content":"Choose a single sentence from the article that involves a lot of activity, or action, or the kind of thing that could be visualized or drawn."},
                 {"role":"assistant","content":session['text']}
         ]
