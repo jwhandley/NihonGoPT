@@ -130,7 +130,7 @@ def index():
             return image_url
     else:
         # Randomly choose one of the sections of the Nikkei
-        sections = ['economy','politics','business','technology','international','society']
+        sections = ['economy','politics','companies','technology','international','society']
         section = random.choice(sections)
 
         # Load the feed the top 50 articles of that section
