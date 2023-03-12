@@ -129,33 +129,50 @@ def index():
             image_url = response2['data'][0]['url']
             return image_url
     else:
-           # Make a request to the webpage
-        url = "https://www.nikkei.com/"
+        # Randomly choose one of the sections of the Nikkei
+        sections = ['economy','politics','companies','financial','finance','technology','international','society']
+        section = random.choice(sections)
+
+        # Load the feed the top 50 articles of that section
+        url = f'https://r.nikkei.com/sections/sokuho-{section}?b=DGXZQOJC121UG012032023000000%2C50&v=true'
         response = requests.get(url)
         # Parse the HTML content using Beautiful Soup
         soup = BeautifulSoup(response.content, 'html.parser')
-        # Find the div with class "article article--main"
+        
+        # Get the list of articles from the page
         articles = soup.select('article:has(a[href^="/article/"])')
         if not isinstance(articles, list):
             articles = [articles]
-        
+
+        # Choose one of the articles at random
         main_article = random.choice(articles)
         
-        # Get the next web link following the main article div
+        # Get the link to the article page
         next_link = main_article.select_one('a[href^="/article/"]')['href']
         
+        # Load the article using the newspaper library
         article = Article('https://www.nikkei.com' + next_link)
         article.download()
         article.parse()
         
+        # Split the texts by newlines
         paragraph_texts = article.text.split('\n\n')
-        paragraph_texts = [p for p in paragraph_texts if p != '企業での記事共有や会議資料への転載・複製、注文印刷などをご希望の方は、リンク先をご覧ください。']
+        # Check if message about sharing the article
+        exclude = ['企業での記事共有や会議資料への転載・複製、注文印刷などをご希望の方は、リンク先をご覧ください。',
+                   '日経電子版をご利用いただき、ありがとうございます。 エキスパートへのメッセージを、以下のフォームよりご入力ください。 ご入力内容は、Think!事務局が確認してサービス改善の参考にさせていただきます。',
+                   '※すべてのメッセージをエキスパートにお伝えするとは限りません。',
+                   '※このフォームからのメッセージに対する返信は行っておりません。予めご了承ください。']
+        paragraph_texts = [p for p in paragraph_texts if p not in exclude]
+
+        # Keep only the first 5 paragraphs in the article
         paragraph_texts = paragraph_texts[:5] if len(paragraph_texts) > 5 else paragraph_texts
         
-            # join paragraph texts into a single string
+        # join paragraph texts into a single string
         texthold = '\n'.join(paragraph_texts)
         texthold = texthold.replace('\n', '</p><p>')
-        session['text']=texthold
+        session['text'] = texthold
+
+        # Set the title to the article title
         session['title'] = article.title
         
     
